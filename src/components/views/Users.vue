@@ -24,7 +24,9 @@
           </el-input>
         </el-col>
         <el-col :span="6">
-          <el-button type="primary">添加用户</el-button>
+          <el-button type="primary" @click="dialogVisible = true"
+            >添加用户</el-button
+          >
         </el-col>
       </el-row>
       <el-table :data="userlist" style="width: 100%" border stripe>
@@ -44,7 +46,7 @@
           </template>
         </el-table-column>
         <el-table-column label="操作" width="180px">
-          <template slot-scope="scope">
+          <template>
             <el-button
               type="primary"
               size="mini"
@@ -81,6 +83,33 @@
       >
       </el-pagination>
     </el-card>
+    <el-dialog title="添加用户" :visible.sync="dialogVisible" width="40%">
+      <!-- 弹窗的主题内容 -->
+      <el-form
+        :model="adduser"
+        :rules="adduserrules"
+        ref="adduserref"
+        label-width="70px"
+      >
+        <el-form-item label="用户名" prop="username">
+          <el-input v-model="adduser.username"></el-input>
+        </el-form-item>
+        <el-form-item label="密码" prop="password">
+          <el-input v-model="adduser.password"></el-input>
+        </el-form-item>
+        <el-form-item label="邮箱">
+          <el-input v-model="adduser.email"></el-input>
+        </el-form-item>
+        <el-form-item label="电话">
+          <el-input v-model="adduser.mobile"></el-input>
+        </el-form-item>
+      </el-form>
+      <!-- 弹窗的底部内容 -->
+      <span slot="footer">
+        <el-button @click="dialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="addUsers">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 <script>
@@ -91,19 +120,54 @@ export default {
   data() {
     return {
       userlist: [],
+      // 更新用户列表的对象
       getuser: {
         query: "",
         pagenum: 1,
-        pagesize: 2
+        pagesize: 2,
       },
-      userpage: []
+      userpage: [],
+      // 添加用户的对象
+      adduser: {
+        username: null,
+        password: null,
+        email: null,
+        mobile: null,
+      },
+      // 用户表单的验证规则
+      adduserrules: {
+        username: [
+          { required: true, message: "请输入用户名", trigger: "blur" },
+          {
+            require: true,
+            min: 3,
+            max: 10,
+            message: "长度在 3 到 10 个字符",
+            trigger: "blur",
+          },
+        ],
+        password: [
+          { required: true, message: "请输入密码", trigger: "blur" },
+          {
+            require: true,
+            min: 6,
+            max: 12,
+            message: "长度在 6 到 12 个字符",
+            trigger: "blur",
+          },
+        ],
+        email: [{ required: true, message: "请输入邮箱", trigger: "blur" }],
+        mobile: [{ required: true, message: "请输入电话", trigger: "blur" }],
+      },
+      // 控制添加用户对话框的显示隐藏
+      dialogVisible: false,
     };
   },
   methods: {
     //请求数据
     async getUserlist() {
       const { data: res } = await this.$http.get("users", {
-        params: this.getuser
+        params: this.getuser,
       });
       if (res.meta.status !== 200) {
         this.$message.error("获取用户列表失败！");
@@ -111,18 +175,15 @@ export default {
         this.$message.success("获取用户列表成功！");
       }
       this.userlist = res.data.users;
-      console.log(res.data);
       this.userpage = res.data;
     },
     //更新页面
     handleSizeChange(newsize) {
-      console.log(newsize);
       this.getuser.pagesize = newsize;
       this.getUserlist();
     },
     //更新跳转页面
     handleCurrentChange(newcurrent) {
-      console.log(newcurrent);
       this.getuser.pagenum = newcurrent;
       this.getUserlist();
     },
@@ -136,8 +197,18 @@ export default {
       } else {
         this.$message.success("更新用户成功");
       }
-    }
-  }
+    },
+    async addUsers() {
+      this.dialogVisible = false;
+      const { data: res } = await this.$http.post("users", this.adduser);
+      console.log(res);
+      if (res.meta.status !== 201) {
+        return this.$message.error("添加用户失败");
+      } else {
+        this.$message.success("添加用户成功");
+      }
+    },
+  },
 };
 </script>
 <style lang="scss" scoped>
