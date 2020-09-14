@@ -72,6 +72,7 @@
                 type="danger"
                 size="mini"
                 icon="el-icon-setting"
+                @click="setAllocation(scope.row)"
               ></el-button>
             </el-tooltip>
           </template>
@@ -154,6 +155,34 @@
         <el-button type="primary" @click="amendVisible">确 定</el-button>
       </span>
     </el-dialog>
+    <!-- 分配角色权限弹窗 -->
+    <el-dialog
+      title="分配角色"
+      :visible.sync="allocationVisible"
+      width="50%"
+      @close="initializeClose"
+    >
+      <div>
+        <p>当前用户：{{ checkedUser.username }}</p>
+        <p>当前角色：{{ checkedUser.role_name }}</p>
+        <p>
+          分配新角色：
+          <el-select v-model="selectUserID" placeholder="请选择">
+            <el-option
+              v-for="item in usersLlist"
+              :key="item.id"
+              :label="item.roleName"
+              :value="item.id"
+            >
+            </el-option>
+          </el-select>
+        </p>
+      </div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="allocationVisible = false">取 消</el-button>
+        <el-button type="primary" @click="changingUserRoles">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 <script>
@@ -196,6 +225,12 @@ export default {
         email: null,
         mobile: null
       },
+      // 当前选中的用户
+      checkedUser: {},
+      // 分配用户权限列表
+      usersLlist: {},
+      // 选中的用户id
+      selectUserID: "",
       //查询修改用户对象
       modificatUser: {},
       // 用户表单的验证规则
@@ -232,7 +267,8 @@ export default {
       // 控制添加用户对话框的显示隐藏
       dialogVisible: false,
       //控制修改用户对话框的显示隐藏
-      modificatVisible: false
+      modificatVisible: false,
+      allocationVisible: false
     };
   },
   methods: {
@@ -277,15 +313,13 @@ export default {
       this.$refs.adduserref.validate(valid => {
         if (!valid) {
           return;
+        }
+        if (res.meta.status !== 201) {
+          return this.$message.error("添加用户失败");
         } else {
-          console.log(res);
-          if (res.meta.status !== 201) {
-            return this.$message.error("添加用户失败");
-          } else {
-            this.$message.success("添加用户成功");
-            this.dialogVisible = false;
-            this.getUserlist();
-          }
+          this.$message.success("添加用户成功");
+          this.dialogVisible = false;
+          this.getUserlist();
         }
       });
     },
@@ -305,6 +339,7 @@ export default {
     },
     // 修改用户信息
     amendVisible() {
+      // 验证表单信息
       this.$refs.modificatRef.validate(async valid => {
         if (!valid) {
           return;
@@ -352,6 +387,38 @@ export default {
           this.getUserlist();
         }
       }
+    },
+    // 分配角色列表
+    async setAllocation(roles) {
+      this.checkedUser = roles;
+      const { data: res } = await this.$http.get("roles");
+      this.usersLlist = res.data;
+      this.allocationVisible = true;
+    },
+    // 修改用户角色
+    async changingUserRoles() {
+      console.log(this.selectUserID);
+      if (!this.selectUserID) {
+        return this.$message.error("请选择要修改的角色");
+      }
+      const { data: res } = await this.$http.put(
+        `users/${this.checkedUser.id}/role`,
+        {
+          id: this.checkedUser.id,
+          rid: this.selectUserID
+        }
+      );
+      if (res.meta.status !== 200) {
+        return this.$message.error("修改角色失败");
+      }
+      this.$message.success("修改角色成功");
+      this.getUserlist();
+      this.allocationVisible = false;
+    },
+    // 监听弹窗关闭，并初始化弹窗
+    initializeClose() {
+      this.selectUserID = "";
+      this.checkedUser = {};
     }
   }
 };
